@@ -100,7 +100,9 @@ try {
   await log(`DASHBOARD_TITLE=${await dashboard.title()}`);
 
   const applicationsLink = dashboard.locator('a[href="/applications"]').first();
-  const guestEntry = dashboard.getByText('ENTER', { exact: true }).first();
+  const guestEntry = dashboard
+    .getByRole('button', { name: /enter/i })
+    .first();
   await retryUntil(
     async () => {
       if (await applicationsLink.isVisible()) {
