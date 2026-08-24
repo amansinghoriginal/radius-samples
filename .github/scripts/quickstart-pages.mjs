@@ -13,7 +13,10 @@
 // limitations under the License.
 
 import { appendFile, writeFile } from 'node:fs/promises';
-import { chromium } from 'playwright';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const { chromium } = require('playwright');
 
 if (process.argv.length !== 7) {
   console.error(

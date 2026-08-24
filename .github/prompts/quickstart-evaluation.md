@@ -11,7 +11,9 @@ Environment:
     - The rendered documentation is served at
       http://127.0.0.1:1313/quick-start/.
     - Playwright and Chromium are installed globally. NODE_PATH is configured,
-      so Node.js scripts can import or require Playwright without npm install.
+      so CommonJS `require('playwright')` can load Playwright without npm
+      install. Node.js ESM bare-package imports do not use NODE_PATH; use
+      `createRequire(import.meta.url)` if an `.mjs` helper needs Playwright.
     - localhost ports are directly reachable; do not create additional port
       forwards except those explicitly created by tutorial commands.
 
