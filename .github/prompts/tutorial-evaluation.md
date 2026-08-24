@@ -67,7 +67,13 @@ Permitted harness mechanics:
       save the helper process ID using `$!`, and use another shell for
       subsequent steps. Do not use `$$`, `exec`, or an inferred process ID.
     - Commands such as `kubectl port-forward` may be backgrounded exactly as
-      written, with output captured in the evaluation directory.
+      written, with output captured in the evaluation directory. Change to the
+      documented working directory first, then launch the command in a separate
+      statement. Do not use `cd ... && command ... &`, because `$!` would
+      identify the compound subshell instead of the long-running command.
+    - To stop a background command, signal its recorded numeric PID, wait for
+      that PID to exit, and verify it is no longer running before starting a
+      later command that reuses the same port.
     - Execute directory-changing commands in the current shell without piping
       them to `tee`; a piped `cd` runs in a subshell and does not persist. Use
       absolute evidence paths whenever a command changes the working directory.
