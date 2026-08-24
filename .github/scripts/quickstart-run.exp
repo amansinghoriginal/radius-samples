@@ -26,7 +26,7 @@ cd $working_directory
 log_file -noappend $transcript
 log_user 1
 
-spawn rad run app.bicep
+spawn rad run app.bicep --application todolist
 
 after 100 {
     send -- "\033]11;rgb:0000/0000/0000\033\\"

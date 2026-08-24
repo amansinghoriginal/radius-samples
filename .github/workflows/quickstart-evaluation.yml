@@ -22,7 +22,12 @@ on:
       docs_ref:
         description: Radius Docs branch or tag to evaluate
         required: true
-        default: v0.60
+        default: synthetic-user-quickstart
+        type: string
+      docs_repository:
+        description: Radius Docs repository to evaluate
+        required: true
+        default: amansinghoriginal/radius-docs
         type: string
   push:
     branches:
@@ -46,7 +51,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
-      DOCS_REF: ${{ inputs.docs_ref || 'v0.60' }}
+      DOCS_REF: ${{ inputs.docs_ref || 'synthetic-user-quickstart' }}
+      DOCS_REPOSITORY: ${{ inputs.docs_repository || 'amansinghoriginal/radius-docs' }}
 
     steps:
       - name: Checkout Samples
@@ -57,7 +63,7 @@ jobs:
       - name: Checkout Radius Docs
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: radius-project/docs
+          repository: ${{ env.DOCS_REPOSITORY }}
           ref: ${{ env.DOCS_REF }}
           path: quickstart-evaluation/docs-source
           persist-credentials: false
