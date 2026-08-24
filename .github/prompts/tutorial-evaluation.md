@@ -59,9 +59,13 @@ Permitted harness mechanics:
       terminal-control sequences without durable status text. Use command exit
       status and later documented outcomes as semantic evidence.
     - Run documented long-lived commands in the background through the helper,
-      save their process IDs, and use another shell for subsequent steps.
+      save the helper process ID using `$!`, and use another shell for
+      subsequent steps. Do not use `$$`, `exec`, or an inferred process ID.
     - Commands such as `kubectl port-forward` may be backgrounded exactly as
       written, with output captured in the evaluation directory.
+    - Execute directory-changing commands in the current shell without piping
+      them to `tee`; a piped `cd` runs in a subshell and does not persist. Use
+      absolute evidence paths whenever a command changes the working directory.
     - You may use bounded waits of at most five minutes for documented
       resources and localhost pages. Radius initialization may take ten minutes.
     - Write Playwright helpers in the evaluation directory as needed. Prefer
