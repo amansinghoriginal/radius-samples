@@ -30,6 +30,11 @@ Goal:
 Path selection:
     - When documentation offers environment alternatives, use the GitHub
       Codespaces or local Linux path matching this Dev Container.
+    - A GitHub Codespaces tab may contain only the link that launches the
+      preconfigured environment, not an installation command. Because this
+      evaluation is already running inside that environment, verify the link
+      destination and the documented CLI version command, then continue. Do
+      not fail merely because the selected tab contains no shell command.
     - Prefer local k3d, local-dev Recipes, and Bicep over cloud-provider paths.
     - Skip sections explicitly marked optional when they require cloud
       credentials or external services, and record the exact skipped section.
