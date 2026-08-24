@@ -36,6 +36,7 @@ on:
       - .devcontainer/**
       - .github/prompts/quickstart-evaluation.md
       - .github/scripts/quickstart-*.exp
+      - .github/scripts/quickstart-pages.mjs
       - .github/workflows/quickstart-evaluation.yml
 
 permissions:
@@ -220,5 +221,6 @@ jobs:
             quickstart-evaluation/docs-source/docs/public/quick-start/
             .github/prompts/quickstart-evaluation.md
             .github/scripts/quickstart-*.exp
+            .github/scripts/quickstart-pages.mjs
           if-no-files-found: warn
           retention-days: 14

@@ -64,8 +64,15 @@ Permitted harness mechanics:
     - You may use bounded waits for documented resources and localhost pages to
       become ready. Initialization may take up to ten minutes; all other waits
       must not exceed five minutes.
-    - You may create Playwright scripts inside the evaluation directory to read
-      the rendered tutorial, inspect localhost pages, and capture screenshots.
+    - You may create a Playwright script inside the evaluation directory to
+      read the rendered tutorial and capture its screenshot.
+    - For the Todo List and Dashboard checks, copy
+      `.github/scripts/quickstart-pages.mjs` into the evaluation directory as
+      the next numbered evidence file. Run that copy with paths for the next
+      five numbered evidence files: its text log, Todo screenshot, Dashboard
+      home screenshot, Dashboard applications-list screenshot, and Dashboard
+      application-resources screenshot. Do not write or use a different
+      localhost browser helper.
     - You may stop background processes that you started after all documented
       checks and cleanup are complete.
 
