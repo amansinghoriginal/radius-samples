@@ -20,6 +20,12 @@ Goal:
     - Read the rendered Quick Start in the browser, choose the GitHub Codespaces
       path where the installation instructions offer alternatives, and follow
       the tutorial in order.
+    - The GitHub Codespaces tab is an entry point into the environment, not an
+      installation command. Verify that it contains a link to
+      `https://codespaces.new/radius-project/samples`, then confirm the
+      Dev Container-provided CLI with the documented `rad version` command and
+      continue. The externally hosted badge image itself is not a required
+      tutorial outcome and may be unavailable in an isolated browser.
     - Determine whether a new user can complete the tutorial without missing
       context, ambiguity, undocumented recovery, or output mismatches.
     - Compare every documented expected result with the observed result.
