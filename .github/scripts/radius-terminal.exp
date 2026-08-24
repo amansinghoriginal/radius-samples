@@ -1,0 +1,73 @@
+#!/usr/bin/expect -f
+# Copyright 2026 The Radius Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+if {$argc < 5} {
+    puts stderr "usage: radius-terminal.exp MODE TIMEOUT WORKING_DIRECTORY TRANSCRIPT COMMAND \[ARG...\]"
+    exit 2
+}
+
+set mode [lindex $argv 0]
+set command_timeout [lindex $argv 1]
+set working_directory [file normalize [lindex $argv 2]]
+set transcript [file normalize [lindex $argv 3]]
+set command [lrange $argv 4 end]
+
+if {$mode ni {default next none}} {
+    puts stderr "mode must be one of: default, next, none"
+    exit 2
+}
+if {![string is integer -strict $command_timeout] || $command_timeout < 0} {
+    puts stderr "timeout must be a non-negative integer"
+    exit 2
+}
+
+set timeout $command_timeout
+if {$command_timeout == 0} {
+    set timeout -1
+}
+
+cd $working_directory
+log_file -noappend $transcript
+log_user 1
+
+spawn {*}$command
+
+# Lip Gloss and Bubble Tea query terminal capabilities before rendering.
+after 100 {
+    send -- "\033]11;rgb:0000/0000/0000\033\\"
+    send -- "\033\[?1;2c"
+}
+
+if {$mode == "default"} {
+    after 3000 {
+        send -- "\r"
+    }
+} elseif {$mode == "next"} {
+    after 3000 {
+        send -- "\033\[B"
+        send -- "\r"
+    }
+}
+
+expect {
+    eof {
+        set result [wait]
+        exit [lindex $result 3]
+    }
+    timeout {
+        puts stderr "Radius command did not complete within $command_timeout seconds"
+        exit 124
+    }
+}

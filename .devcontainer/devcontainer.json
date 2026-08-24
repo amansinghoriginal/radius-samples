@@ -32,11 +32,14 @@
 	  }
 	},
 	"containerEnv": {
-	  "RADIUS_QUICKSTART_EVALUATION": "${localEnv:RADIUS_QUICKSTART_EVALUATION}"
+	  "RADIUS_TUTORIAL_EVALUATION": "${localEnv:RADIUS_TUTORIAL_EVALUATION}"
 	},
 	"remoteEnv": {
 	  "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
-	  "COPILOT_GITHUB_TOKEN": "${localEnv:COPILOT_GITHUB_TOKEN}"
+	  "COPILOT_GITHUB_TOKEN": "${localEnv:COPILOT_GITHUB_TOKEN}",
+	  "RADIUS_TUTORIAL_ID": "${localEnv:RADIUS_TUTORIAL_ID}",
+	  "RADIUS_TUTORIAL_PATH": "${localEnv:RADIUS_TUTORIAL_PATH}",
+	  "RADIUS_PREREQUISITE_PROFILE": "${localEnv:RADIUS_PREREQUISITE_PROFILE}"
 	},
 	// Use 'portsAttributes' to set default properties for specific forwarded ports.
 	// More info: https://containers.dev/implementors/json_reference/#port-attributes

@@ -15,11 +15,11 @@
 
 set -eu
 
-if [ "${RADIUS_QUICKSTART_EVALUATION:-}" != "true" ]; then
+if [ "${RADIUS_TUTORIAL_EVALUATION:-}" != "true" ]; then
     return 0 2>/dev/null || exit 0
 fi
 
-echo "Installing Radius Quick Start evaluation tools..."
+echo "Installing Radius tutorial evaluation tools..."
 
 sudo apt-get update
 sudo apt-get install --yes --no-install-recommends expect
@@ -27,4 +27,4 @@ sudo apt-get install --yes --no-install-recommends expect
 npm install --global @github/copilot playwright
 npx playwright install --with-deps chromium
 
-echo "Radius Quick Start evaluation tools installed."
+echo "Radius tutorial evaluation tools installed."

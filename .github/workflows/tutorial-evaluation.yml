@@ -14,7 +14,7 @@
 
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 ---
-name: Synthetic User - Radius Quick Start
+name: Synthetic User - Radius Tutorials
 
 on:
   schedule:
@@ -31,14 +31,33 @@ permissions:
   contents: read
 
 concurrency:
-  group: radius-quickstart-evaluation-${{ github.ref }}
+  group: radius-tutorial-evaluation-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   evaluate:
-    name: Evaluate Quick Start
+    name: Evaluate ${{ matrix.tutorial }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tutorial: quick-start
+            docs_path: quick-start
+            prerequisite_profile: uninitialized
+          - tutorial: add-radius
+            docs_path: reference/samples/add-radius
+            prerequisite_profile: uninitialized
+          - tutorial: local-dev-recipes
+            docs_path: guides/recipes/howto-dev-recipes
+            prerequisite_profile: uninitialized
+          - tutorial: service-networking
+            docs_path: guides/author-apps/networking/service-networking
+            prerequisite_profile: radius-initialized
+          - tutorial: patch-podspec
+            docs_path: guides/author-apps/kubernetes/patch-podspec
+            prerequisite_profile: radius-initialized
     env:
       DOCS_REF: ${{ inputs.docs_ref || 'synthetic-user-quickstart' }}
 
@@ -53,28 +72,28 @@ jobs:
         with:
           repository: amansinghoriginal/radius-docs
           ref: ${{ env.DOCS_REF }}
-          path: quickstart-evaluation/docs-source
+          path: tutorial-evaluation/docs-source
           persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: quickstart-evaluation/docs-source/docs/go.mod
+          go-version-file: tutorial-evaluation/docs-source/docs/go.mod
           cache: false
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: quickstart-evaluation/docs-source/.node-version
+          node-version-file: tutorial-evaluation/docs-source/.node-version
 
       - name: Build rendered documentation
-        working-directory: quickstart-evaluation/docs-source/docs
+        working-directory: tutorial-evaluation/docs-source/docs
         env:
           HUGO_ENV: production
         run: |
           npm ci
           npm run build -- --baseURL http://127.0.0.1:1313/
-          test -f public/quick-start/index.html
+          test -f public/${{ matrix.docs_path }}/index.html
 
       - name: Run synthetic-user evaluation
         id: evaluation
@@ -82,7 +101,10 @@ jobs:
         uses: devcontainers/ci@v0.3
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT_TOKEN }}
-          RADIUS_QUICKSTART_EVALUATION: "true"
+          RADIUS_TUTORIAL_EVALUATION: "true"
+          RADIUS_TUTORIAL_ID: ${{ matrix.tutorial }}
+          RADIUS_TUTORIAL_PATH: ${{ matrix.docs_path }}
+          RADIUS_PREREQUISITE_PROFILE: ${{ matrix.prerequisite_profile }}
         with:
           configFile: .devcontainer/devcontainer.json
           push: never
@@ -90,32 +112,51 @@ jobs:
             set -eu
 
             export NODE_PATH="$(npm root --global)"
-            DOCS_ROOT="quickstart-evaluation/docs-source/docs/public"
-            COPILOT_OUTPUT="quickstart-evaluation/copilot-output.txt"
+            REPOSITORY_ROOT="$PWD"
+            EVALUATION_ROOT="tutorial-evaluation/$RADIUS_TUTORIAL_ID"
+            WORKSPACE="$EVALUATION_ROOT/workspace"
+            DOCS_ROOT="tutorial-evaluation/docs-source/docs/public"
+            COPILOT_OUTPUT="$EVALUATION_ROOT/copilot-output.txt"
+            mkdir -p "$WORKSPACE"
 
             python3 -m http.server 1313 \
               --bind 127.0.0.1 \
               --directory "$DOCS_ROOT" \
-              > quickstart-evaluation/docs-server.log 2>&1 &
+              > "$EVALUATION_ROOT/docs-server.log" 2>&1 &
             DOCS_SERVER_PID=$!
             trap 'kill "$DOCS_SERVER_PID" 2>/dev/null || true' EXIT
 
             ready=false
             for _ in $(seq 1 30); do
-              if wget --quiet --spider http://127.0.0.1:1313/quick-start/; then
+              if wget --quiet --spider "http://127.0.0.1:1313/$RADIUS_TUTORIAL_PATH/"; then
                 ready=true
                 break
               fi
               sleep 1
             done
             if [ "$ready" != "true" ]; then
-              echo "Rendered Quick Start did not become available." >&2
+              echo "Rendered tutorial did not become available." >&2
               exit 1
             fi
 
+            if [ "$RADIUS_PREREQUISITE_PROFILE" = "radius-initialized" ]; then
+              "$REPOSITORY_ROOT/.github/scripts/radius-terminal.exp" \
+                next 600 "$WORKSPACE" "$EVALUATION_ROOT/prerequisite-init.txt" \
+                rad init
+            fi
+
+            TUTORIAL_URL="http://127.0.0.1:1313/$RADIUS_TUTORIAL_PATH/"
+            PROMPT_CONTEXT=$(printf '%s\n' \
+              "Tutorial identifier: $RADIUS_TUTORIAL_ID" \
+              "Rendered tutorial URL: $TUTORIAL_URL" \
+              "Repository root: $REPOSITORY_ROOT" \
+              "Working directory: $REPOSITORY_ROOT/$WORKSPACE" \
+              "Prerequisite profile: $RADIUS_PREREQUISITE_PROFILE" \
+              "")
             copilot_exit=0
-            timeout 1800 copilot \
-              --prompt "$(cat .github/prompts/quickstart-evaluation.md)" \
+            timeout 2700 copilot \
+              -C "$WORKSPACE" \
+              --prompt "$PROMPT_CONTEXT$(cat "$REPOSITORY_ROOT/.github/prompts/tutorial-evaluation.md")" \
               --model gpt-5.6-sol \
               --effort xhigh \
               --context long_context \
@@ -144,16 +185,16 @@ jobs:
               > "$COPILOT_OUTPUT" 2>&1 || copilot_exit=$?
 
             cat "$COPILOT_OUTPUT"
-            echo "$copilot_exit" > quickstart-evaluation/copilot-exit-code.txt
+            echo "$copilot_exit" > "$EVALUATION_ROOT/copilot-exit-code.txt"
 
-            REPORT=$(find . -maxdepth 2 -type f -name report.md \
-              -path './evaluation-*/*' | sort -r | head -1)
+            REPORT=$(find "$WORKSPACE" -maxdepth 2 -type f -name report.md \
+              -path '*/evaluation-*/*' | sort -r | head -1)
             if [ -z "$REPORT" ]; then
               echo "No evaluation report was produced." >&2
               exit 1
             fi
 
-            printf '%s\n' "$REPORT" > quickstart-evaluation/report-path.txt
+            printf '%s\n' "$REPORT" > "$EVALUATION_ROOT/report-path.txt"
             STATUS_COUNT=$(grep -cE '^## STATUS: (SUCCESS|FAILURE)$' "$REPORT" || true)
             FINAL_LINE=$(tail -n 1 "$REPORT")
 
@@ -169,11 +210,12 @@ jobs:
       - name: Publish evaluation report
         if: always()
         run: |
-          REPORT=$(find . -maxdepth 2 -type f -name report.md \
-            -path './evaluation-*/*' | sort -r | head -1)
+          REPORT=$(find "tutorial-evaluation/${{ matrix.tutorial }}/workspace" \
+            -maxdepth 2 -type f -name report.md \
+            -path '*/evaluation-*/*' | sort -r | head -1)
           if [ -z "$REPORT" ]; then
             {
-              echo "## Radius Quick Start evaluation"
+              echo "## Radius tutorial evaluation: ${{ matrix.tutorial }}"
               echo ""
               echo "No report was produced."
             } >> "$GITHUB_STEP_SUMMARY"
@@ -184,7 +226,7 @@ jobs:
           sed -i 's/\r$//' "$REPORT"
 
           {
-            echo "## Radius Quick Start evaluation"
+            echo "## Radius tutorial evaluation: ${{ matrix.tutorial }}"
             echo ""
             cat "$REPORT"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -199,15 +241,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: radius-quickstart-evaluation-${{ github.run_id }}
+          name: radius-tutorial-${{ matrix.tutorial }}-${{ github.run_id }}
           path: |
-            evaluation-*/
-            quickstart-evaluation/copilot-exit-code.txt
-            quickstart-evaluation/copilot-output.txt
-            quickstart-evaluation/docs-server.log
-            quickstart-evaluation/docs-source/docs/public/quick-start/
-            .github/prompts/quickstart-evaluation.md
-            .github/scripts/quickstart-*.exp
-            .github/scripts/quickstart-pages.mjs
+            tutorial-evaluation/${{ matrix.tutorial }}/workspace/evaluation-*/
+            tutorial-evaluation/${{ matrix.tutorial }}/copilot-exit-code.txt
+            tutorial-evaluation/${{ matrix.tutorial }}/copilot-output.txt
+            tutorial-evaluation/${{ matrix.tutorial }}/docs-server.log
+            tutorial-evaluation/${{ matrix.tutorial }}/prerequisite-init.txt
+            tutorial-evaluation/docs-source/docs/public/${{ matrix.docs_path }}/
+            .github/prompts/tutorial-evaluation.md
+            .github/scripts/radius-terminal.exp
           if-no-files-found: warn
           retention-days: 14
