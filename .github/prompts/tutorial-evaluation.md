@@ -95,8 +95,10 @@ Evaluation criteria:
 
 Failure behavior:
     - Fail immediately when an instruction is ambiguous, a required command
-      fails, expected output or behavior does not match, or a required page
-      fails to become ready.
+      unexpectedly fails, expected output or behavior does not match, or a
+      required page fails to become ready. A nonzero exit is acceptable only
+      when the rendered guide explicitly documents that failure as the expected
+      result and the observed error matches it.
     - Do not debug, repair, retry with different commands, inspect product
       internals, search the web, install packages, or modify documentation.
     - Record the failure and evidence already collected, then stop.
