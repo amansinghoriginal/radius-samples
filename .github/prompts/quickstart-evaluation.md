@@ -34,23 +34,20 @@ Permitted harness mechanics:
     - At the beginning, you may run `rad version`,
       `kubectl config current-context`, and `kubectl cluster-info` as environment
       sanity checks.
-    - `rad initialize` is interactive. Use `expect` from a helper saved inside
-      the evaluation directory to spawn the exact command and select the
-      documented "Yes" response. This only emulates the terminal interaction;
-      it must not change the command or add undocumented Radius flags.
-      Radius uses Bubble Tea, which asks a real terminal for its background
-      color before drawing. When the pseudo-terminal emits the OSC 11 query
-      (`ESC ] 11 ; ?`), respond with a valid dark-background terminal response
-      (`ESC ] 11 ; rgb:0000/0000/0000 BEL`) and continue waiting. Match the
-      exact prompt `Setup application in the current directory?`; **Yes** is
-      already selected by default, so send Enter rather than the letter `y`.
-      Continue answering any later OSC 11 queries until the command exits.
+    - `rad initialize` is interactive. Copy
+      `.github/scripts/quickstart-initialize.exp` into the evaluation directory
+      as the next numbered evidence file, then run that copy with the absolute
+      `todolist` working directory and the next numbered transcript path as its
+      two arguments. It spawns the exact `rad initialize` command and accepts
+      the documented default **Yes** selection in a pseudo-terminal. Do not
+      write or use a different initialization helper.
     - `rad run app.bicep` is long-lived. You may run that exact command in a
       background pseudo-terminal, capture its output in the evaluation
       directory, and use another shell for later tutorial steps. Its helper
       must answer the same OSC 11 terminal query if it occurs.
     - You may use bounded waits for documented resources and localhost pages to
-      become ready. A wait must not exceed five minutes.
+      become ready. Initialization may take up to ten minutes; all other waits
+      must not exceed five minutes.
     - You may create Playwright scripts inside the evaluation directory to read
       the rendered tutorial, inspect localhost pages, and capture screenshots.
     - You may stop background processes that you started after all documented
