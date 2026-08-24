@@ -5,7 +5,8 @@
 	"postCreateCommand": "bash ./.devcontainer/post-create.sh",
 	"runArgs": [
 	  "--privileged",
-	  "--init"
+	  "--init",
+	  "--ipc=host"
 	],
 	// Features to add to the dev container. More info: https://containers.dev/features
 	"features": {
@@ -30,8 +31,12 @@
 		]
 	  }
 	},
+	"containerEnv": {
+	  "RADIUS_QUICKSTART_EVALUATION": "${localEnv:RADIUS_QUICKSTART_EVALUATION}"
+	},
 	"remoteEnv": {
-	  "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}"
+	  "LOCAL_WORKSPACE_FOLDER": "${localWorkspaceFolder}",
+	  "COPILOT_GITHUB_TOKEN": "${localEnv:COPILOT_GITHUB_TOKEN}"
 	},
 	// Use 'portsAttributes' to set default properties for specific forwarded ports.
 	// More info: https://containers.dev/implementors/json_reference/#port-attributes

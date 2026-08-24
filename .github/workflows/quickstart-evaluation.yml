@@ -1,0 +1,216 @@
+# Copyright 2026 The Radius Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+---
+name: Synthetic User - Radius Quick Start
+
+on:
+  workflow_dispatch:
+    inputs:
+      docs_ref:
+        description: Radius Docs branch or tag to evaluate
+        required: true
+        default: v0.60
+        type: string
+  push:
+    branches:
+      - synthetic-user-quickstart
+    paths:
+      - .devcontainer/**
+      - .github/prompts/quickstart-evaluation.md
+      - .github/workflows/quickstart-evaluation.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: radius-quickstart-evaluation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate:
+    name: Evaluate Quick Start
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      DOCS_REF: ${{ inputs.docs_ref || 'v0.60' }}
+
+    steps:
+      - name: Checkout Samples
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Checkout Radius Docs
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: radius-project/docs
+          ref: ${{ env.DOCS_REF }}
+          path: quickstart-evaluation/docs-source
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: quickstart-evaluation/docs-source/docs/go.mod
+          cache: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: quickstart-evaluation/docs-source/.node-version
+
+      - name: Build rendered documentation
+        working-directory: quickstart-evaluation/docs-source/docs
+        env:
+          HUGO_ENV: production
+        run: |
+          npm ci
+          npm run build -- --baseURL http://127.0.0.1:1313/
+          test -f public/quick-start/index.html
+
+      - name: Run synthetic-user evaluation
+        id: evaluation
+        continue-on-error: true
+        uses: devcontainers/ci@v0.3
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT_TOKEN }}
+          RADIUS_QUICKSTART_EVALUATION: "true"
+        with:
+          configFile: .devcontainer/devcontainer.json
+          push: never
+          runCmd: |
+            set -eu
+
+            export NODE_PATH="$(npm root --global)"
+            DOCS_ROOT="quickstart-evaluation/docs-source/docs/public"
+            COPILOT_OUTPUT="quickstart-evaluation/copilot-output.txt"
+
+            python3 -m http.server 1313 \
+              --bind 127.0.0.1 \
+              --directory "$DOCS_ROOT" \
+              > quickstart-evaluation/docs-server.log 2>&1 &
+            DOCS_SERVER_PID=$!
+            trap 'kill "$DOCS_SERVER_PID" 2>/dev/null || true' EXIT
+
+            ready=false
+            for _ in $(seq 1 30); do
+              if wget --quiet --spider http://127.0.0.1:1313/quick-start/; then
+                ready=true
+                break
+              fi
+              sleep 1
+            done
+            if [ "$ready" != "true" ]; then
+              echo "Rendered Quick Start did not become available." >&2
+              exit 1
+            fi
+
+            copilot_exit=0
+            timeout 1800 copilot \
+              --prompt "$(cat .github/prompts/quickstart-evaluation.md)" \
+              --model gpt-5.6-sol \
+              --effort xhigh \
+              --context long_context \
+              --allow-all-tools \
+              --allow-all-paths \
+              --allow-url localhost \
+              --allow-url 127.0.0.1 \
+              --deny-tool fetch \
+              --deny-tool websearch \
+              --deny-tool githubRepo \
+              --deny-tool 'shell(curl *)' \
+              --deny-tool 'shell(wget *)' \
+              --deny-tool 'shell(nc *)' \
+              --deny-tool 'shell(ssh *)' \
+              --deny-tool 'shell(scp *)' \
+              --deny-tool 'shell(telnet *)' \
+              --deny-tool 'shell(ftp *)' \
+              --deny-tool 'shell(dd *)' \
+              --deny-tool 'shell(rm -rf /*)' \
+              --disable-builtin-mcps \
+              --no-ask-user \
+              --no-auto-update \
+              --no-custom-instructions \
+              --no-remote-export \
+              --secret-env-vars COPILOT_GITHUB_TOKEN \
+              > "$COPILOT_OUTPUT" 2>&1 || copilot_exit=$?
+
+            cat "$COPILOT_OUTPUT"
+            echo "$copilot_exit" > quickstart-evaluation/copilot-exit-code.txt
+
+            REPORT=$(find . -maxdepth 2 -type f -name report.md \
+              -path './evaluation-*/*' | sort -r | head -1)
+            if [ -z "$REPORT" ]; then
+              echo "No evaluation report was produced." >&2
+              exit 1
+            fi
+
+            printf '%s\n' "$REPORT" > quickstart-evaluation/report-path.txt
+            STATUS_COUNT=$(grep -cE '^## STATUS: (SUCCESS|FAILURE)$' "$REPORT" || true)
+            FINAL_LINE=$(tail -n 1 "$REPORT")
+
+            if [ "$STATUS_COUNT" -ne 1 ]; then
+              echo "The report must contain exactly one status line." >&2
+              exit 1
+            fi
+            if [ "$FINAL_LINE" != "## STATUS: SUCCESS" ]; then
+              echo "The evaluation did not succeed: $FINAL_LINE" >&2
+              exit 1
+            fi
+
+      - name: Publish evaluation report
+        if: always()
+        run: |
+          REPORT=$(find . -maxdepth 2 -type f -name report.md \
+            -path './evaluation-*/*' | sort -r | head -1)
+          if [ -z "$REPORT" ]; then
+            {
+              echo "## Radius Quick Start evaluation"
+              echo ""
+              echo "No report was produced."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          sed -i '1s/^\xEF\xBB\xBF//' "$REPORT"
+          sed -i 's/\r$//' "$REPORT"
+
+          {
+            echo "## Radius Quick Start evaluation"
+            echo ""
+            cat "$REPORT"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          STATUS_COUNT=$(grep -cE '^## STATUS: (SUCCESS|FAILURE)$' "$REPORT" || true)
+          FINAL_LINE=$(tail -n 1 "$REPORT")
+          if [ "$STATUS_COUNT" -ne 1 ] || [ "$FINAL_LINE" != "## STATUS: SUCCESS" ]; then
+            exit 1
+          fi
+
+      - name: Upload evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: radius-quickstart-evaluation-${{ github.run_id }}
+          path: |
+            evaluation-*/
+            quickstart-evaluation/copilot-exit-code.txt
+            quickstart-evaluation/copilot-output.txt
+            quickstart-evaluation/docs-server.log
+            quickstart-evaluation/docs-source/docs/public/quick-start/
+            .github/prompts/quickstart-evaluation.md
+          if-no-files-found: warn
+          retention-days: 14

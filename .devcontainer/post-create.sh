@@ -14,3 +14,6 @@ done
 wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash
 dapr uninstall # clean if needed
 dapr init -k
+
+# Install synthetic-user tooling only in the tutorial evaluation workflow.
+. "$(dirname "$0")/scripts/install-evaluation-tools.sh"
