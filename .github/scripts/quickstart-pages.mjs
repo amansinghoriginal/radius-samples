@@ -96,6 +96,13 @@ try {
   await log(`DASHBOARD_HOME_URL=${dashboard.url()}`);
   await log(`DASHBOARD_TITLE=${await dashboard.title()}`);
 
+  const guestEntry = dashboard.getByRole('button', { name: 'ENTER', exact: true });
+  if (await guestEntry.isVisible()) {
+    await log('DASHBOARD_GUEST_ENTRY_VISIBLE=true');
+    await guestEntry.click();
+    await dashboard.waitForLoadState('domcontentloaded');
+  }
+
   const applicationsLink = dashboard.locator('a[href="/applications"]').first();
   await applicationsLink.waitFor({ state: 'visible', timeout: 30_000 });
   await applicationsLink.click();
