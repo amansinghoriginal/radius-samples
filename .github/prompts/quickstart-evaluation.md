@@ -38,9 +38,17 @@ Permitted harness mechanics:
       the evaluation directory to spawn the exact command and select the
       documented "Yes" response. This only emulates the terminal interaction;
       it must not change the command or add undocumented Radius flags.
+      Radius uses Bubble Tea, which asks a real terminal for its background
+      color before drawing. When the pseudo-terminal emits the OSC 11 query
+      (`ESC ] 11 ; ?`), respond with a valid dark-background terminal response
+      (`ESC ] 11 ; rgb:0000/0000/0000 BEL`) and continue waiting. Match the
+      exact prompt `Setup application in the current directory?`; **Yes** is
+      already selected by default, so send Enter rather than the letter `y`.
+      Continue answering any later OSC 11 queries until the command exits.
     - `rad run app.bicep` is long-lived. You may run that exact command in a
       background pseudo-terminal, capture its output in the evaluation
-      directory, and use another shell for later tutorial steps.
+      directory, and use another shell for later tutorial steps. Its helper
+      must answer the same OSC 11 terminal query if it occurs.
     - You may use bounded waits for documented resources and localhost pages to
       become ready. A wait must not exceed five minutes.
     - You may create Playwright scripts inside the evaluation directory to read
