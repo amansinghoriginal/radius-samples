@@ -41,10 +41,26 @@ Permitted harness mechanics:
       two arguments. It spawns the exact `rad initialize` command and accepts
       the documented default **Yes** selection in a pseudo-terminal. Do not
       write or use a different initialization helper.
-    - `rad run app.bicep` is long-lived. You may run that exact command in a
-      background pseudo-terminal, capture its output in the evaluation
-      directory, and use another shell for later tutorial steps. Its helper
-      must answer the same OSC 11 terminal query if it occurs.
+      Bubble Tea redraws and erases its live frames, so the transcript may
+      contain only terminal-control sequences. A zero exit status plus the
+      generated `app.bicep` and successful later tutorial outcomes are the
+      durable evidence of initialization; do not fail only because transient
+      TUI text is absent from the transcript.
+    - `rad run app.bicep` is long-lived. Copy
+      `.github/scripts/quickstart-run.exp` into the evaluation directory as the
+      next numbered evidence file. Start that copy with `nohup` in the
+      background, passing the absolute `todolist` working directory and the
+      next numbered transcript path. Save the helper process ID in the
+      evaluation directory and use another shell for later tutorial steps. Do
+      not write or use a different `rad run` helper. Its live TUI frames may
+      also be erased from the transcript; validate deployment through the
+      documented localhost pages and application graph.
+    - `rad app delete todolist` requires confirmation. Copy
+      `.github/scripts/quickstart-delete.exp` into the evaluation directory as
+      the next numbered evidence file, then run that copy with the absolute
+      `todolist` working directory and next numbered transcript path. It spawns
+      the exact documented command and selects **Yes** in its pseudo-terminal.
+      Do not write or use a different deletion helper.
     - You may use bounded waits for documented resources and localhost pages to
       become ready. Initialization may take up to ten minutes; all other waits
       must not exceed five minutes.
@@ -62,7 +78,9 @@ Evaluation criteria:
       relationships, and user-visible behavior must match.
     - Verify that `rad initialize` reports successful installation, creation of
       the default environment, scaffolding of the `todolist` application, and
-      local configuration.
+      local configuration. Because transient TUI frames are not durable in the
+      transcript, verify these semantically through a successful command exit,
+      the generated application definition, and the later tutorial outcomes.
     - Verify that the generated `app.bicep` exists and semantically matches the
       application definition shown in the documentation.
     - Verify that `rad run app.bicep` completes deployment and starts the
