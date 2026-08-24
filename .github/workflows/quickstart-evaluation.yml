@@ -17,6 +17,8 @@
 name: Synthetic User - Radius Quick Start
 
 on:
+  schedule:
+    - cron: "0 13 * * 5"
   workflow_dispatch:
     inputs:
       docs_ref:
@@ -24,20 +26,6 @@ on:
         required: true
         default: synthetic-user-quickstart
         type: string
-      docs_repository:
-        description: Radius Docs repository to evaluate
-        required: true
-        default: amansinghoriginal/radius-docs
-        type: string
-  push:
-    branches:
-      - synthetic-user-quickstart
-    paths:
-      - .devcontainer/**
-      - .github/prompts/quickstart-evaluation.md
-      - .github/scripts/quickstart-*.exp
-      - .github/scripts/quickstart-pages.mjs
-      - .github/workflows/quickstart-evaluation.yml
 
 permissions:
   contents: read
@@ -53,7 +41,6 @@ jobs:
     timeout-minutes: 60
     env:
       DOCS_REF: ${{ inputs.docs_ref || 'synthetic-user-quickstart' }}
-      DOCS_REPOSITORY: ${{ inputs.docs_repository || 'amansinghoriginal/radius-docs' }}
 
     steps:
       - name: Checkout Samples
@@ -64,7 +51,7 @@ jobs:
       - name: Checkout Radius Docs
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: ${{ env.DOCS_REPOSITORY }}
+          repository: amansinghoriginal/radius-docs
           ref: ${{ env.DOCS_REF }}
           path: quickstart-evaluation/docs-source
           persist-credentials: false
